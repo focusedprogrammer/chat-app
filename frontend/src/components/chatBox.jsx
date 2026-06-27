@@ -5,7 +5,7 @@ import socket from "../socket";
 
 import ChatHeader from "./ChatHeader";
 import MessageList from "./MessageList";
-import ChatInput from "./ChatInput";
+import ChatInput from "./chatInput";
 
 import useWebRTC from "../hooks/useWebRTC";
 
