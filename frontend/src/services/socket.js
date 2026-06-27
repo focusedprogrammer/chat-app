@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 const socket = io(
-  "chat-app-production-2e1b.up.railway.app",
+  import.meta.env.VITE_SOCKET_URL,
   {
     autoConnect: false
   }

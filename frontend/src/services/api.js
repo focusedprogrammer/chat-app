@@ -25,7 +25,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "chat-app-production-2e1b.up.railway.app"
+   baseURL: import.meta.env.VITE_API_URL,
 });
 
 API.interceptors.request.use((req) => {
