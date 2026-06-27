@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 const socket = io(
-  "http://localhost:5000",
+  "chat-app-production-2e1b.up.railway.app",
   {
     autoConnect: false
   }

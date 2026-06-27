@@ -7,3 +7,7 @@ host : mysql.railway.internal;
 password : FWyjxpAgfFYxSAJKPQNcWbfCfYJTPYMn;
 port : 3306;
 MYSQLUSER: root
+
+
+
+"chat-app-production-2e1b.up.railway.app"
