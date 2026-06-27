@@ -145,3 +145,54 @@ exports.getMessages = async (req, res) => {
   }
 };
 
+exports.deleteMessage = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    await db.query(
+      "DELETE FROM messages WHERE id=?",
+      [id]
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+};
+
+exports.editMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+
+    await db.query(
+      `
+      UPDATE messages
+      SET message = ?
+      WHERE id = ?
+      `,
+      [text, id]
+    );
+
+    res.json({
+      success: true,
+      message: "Message updated"
+    });
+
+  } catch (err) {
+    console.log(err);
+
+    res.status(500).json({
+      success: false
+    });
+  }
+};
+

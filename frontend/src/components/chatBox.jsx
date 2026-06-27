@@ -3,115 +3,373 @@ import { useEffect, useState, useRef } from "react";
 import API from "../services/api";
 import socket from "../socket";
 
-import MessageBubble from "./MessageBubble";
+import ChatHeader from "./ChatHeader";
+import MessageList from "./MessageList";
+import ChatInput from "./ChatInput";
 
-function ChatBox({ friend, currentUser }) {
-  const typingTimeoutRef = useRef(null);
-  const [conversationId, setConversationId] = useState(null);
+import useWebRTC from "../hooks/useWebRTC";
 
-  const [messages, setMessages] = useState([]);
+function ChatBox({
+  friend,
+  currentUser,
+}) {
 
-  const [text, setText] = useState("");
+  const typingTimeoutRef =
+    useRef(null);
 
-  const messagesEndRef = useRef(null);
+  const messagesEndRef =
+    useRef(null);
 
-  const [typing, setTyping] = useState(false);
+  const myVideo =
+    useRef(null);
+
+  const userVideo =
+    useRef(null);
+
+  const [
+    conversationId,
+    setConversationId
+  ] = useState(null);
+
+  const [
+    messages,
+    setMessages
+  ] = useState([]);
+
+  const [
+    text,
+    setText
+  ] = useState("");
+
+  const [
+    typing,
+    setTyping
+  ] = useState(false);
+
+  const [
+    selectedMessage,
+    setSelectedMessage
+  ] = useState(null);
+
+  const {
+    startCall,
+    endCall,
+  } = useWebRTC(
+    friend,
+    currentUser,
+    myVideo,
+    userVideo
+  );
 
   useEffect(() => {
+
     if (friend) {
       startConversation();
     }
+
   }, [friend]);
 
   useEffect(() => {
+
     scrollToBottom();
+
   }, [messages]);
 
   useEffect(() => {
+
     if (currentUser) {
-      socket.emit("join", currentUser);
+
+      socket.emit(
+        "join",
+        currentUser
+      );
+
     }
+
   }, [currentUser]);
 
   useEffect(() => {
-    socket.on("receiveMessage", (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-    });
+
+    const handleReceiveMessage =
+      (newMessage) => {
+
+        setMessages(
+          (prev) => [
+            ...prev,
+            newMessage
+          ]
+        );
+
+      };
+
+    socket.on(
+      "receiveMessage",
+      handleReceiveMessage
+    );
 
     return () => {
-      socket.off("receiveMessage");
+
+      socket.off(
+        "receiveMessage",
+        handleReceiveMessage
+      );
+
     };
+
   }, []);
 
   useEffect(() => {
-    socket.on("typing", () => {
-      setTyping(true);
-    });
 
-    socket.on("stopTyping", () => {
-      setTyping(false);
-    });
+    const handleTyping =
+      () => {
+
+        setTyping(true);
+
+      };
+
+    const handleStopTyping =
+      () => {
+
+        setTyping(false);
+
+      };
+
+    socket.on(
+      "typing",
+      handleTyping
+    );
+
+    socket.on(
+      "stopTyping",
+      handleStopTyping
+    );
 
     return () => {
-      socket.off("typing");
 
-      socket.off("stopTyping");
+      socket.off(
+        "typing",
+        handleTyping
+      );
+
+      socket.off(
+        "stopTyping",
+        handleStopTyping
+      );
+
     };
+
   }, []);
 
-  const scrollToBottom = () => {
-    messagesEndRef?.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  };
+  const scrollToBottom =
+    () => {
 
-  const startConversation = async () => {
-    try {
-      const res = await API.post("/chat/start", {
-        friendId: friend.id,
-      });
+      messagesEndRef
+        ?.current
+        ?.scrollIntoView({
+          behavior:
+            "smooth",
+        });
 
-      setConversationId(res.data.id);
+    };
 
-      loadMessages(res.data.id);
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  const startConversation =
+    async () => {
 
-  const loadMessages = async (id) => {
-    try {
-      const res = await API.get(`/chat/messages/${id}`);
+      try {
 
-      setMessages(res.data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
+        const res =
+          await API.post(
+            "/chat/start",
+            {
+              friendId:
+                friend.id,
+            }
+          );
 
-  const sendMessage = async () => {
-    if (!text.trim() || !conversationId) return;
+        setConversationId(
+          res.data.id
+        );
 
-    try {
-      await API.post("/chat/send", {
-        conversationId,
-        message: text,
-      });
+        loadMessages(
+          res.data.id
+        );
 
-      socket.emit("stopTyping", {
-        senderId: currentUser,
-        receiverId: friend?.id,
-      });
+      } catch (err) {
 
-      setText("");
+        console.log(err);
 
-      loadMessages(conversationId);
-    } catch (err) {
-      console.log(err);
-    }
-  };
+      }
+
+    };
+
+  const loadMessages =
+    async (id) => {
+
+      try {
+
+        const res =
+          await API.get(
+            `/chat/messages/${id}`
+          );
+
+        setMessages(
+          res.data
+        );
+
+      } catch (err) {
+
+        console.log(err);
+
+      }
+
+    };
+
+  const sendMessage =
+    async () => {
+
+      if (
+        !text.trim() ||
+        !conversationId
+      ) {
+        return;
+      }
+
+      try {
+
+        await API.post(
+          "/chat/send",
+          {
+            conversationId,
+            message: text,
+          }
+        );
+
+        socket.emit(
+          "stopTyping",
+          {
+            senderId:
+              currentUser,
+            receiverId:
+              friend.id,
+          }
+        );
+
+        setText("");
+
+        loadMessages(
+          conversationId
+        );
+
+      } catch (err) {
+
+        console.log(err);
+
+      }
+
+    };
+
+  const deleteMessage =
+    async (id) => {
+
+      try {
+
+        await API.delete(
+          `/chat/message/${id}`
+        );
+
+        setMessages(
+          (prev) =>
+            prev.filter(
+              (msg) =>
+                msg.id !== id
+            )
+        );
+
+        setSelectedMessage(
+          null
+        );
+
+      } catch (err) {
+
+        console.log(err);
+
+      }
+
+    };
+
+  const editMessage =
+    async (
+      id,
+      oldText
+    ) => {
+
+      const newText =
+        prompt(
+          "Edit Message",
+          oldText
+        );
+
+      if (!newText) {
+        return;
+      }
+
+      try {
+
+        await API.put(
+          `/chat/message/${id}`,
+          {
+            text:
+              newText,
+          }
+        );
+
+        setMessages(
+          (prev) =>
+            prev.map(
+              (msg) =>
+                msg.id === id
+                  ? {
+                      ...msg,
+                      message:
+                        newText,
+                    }
+                  : msg
+            )
+        );
+
+        setSelectedMessage(
+          null
+        );
+
+      } catch (err) {
+
+        console.log(err);
+
+      }
+
+    };
+
+  const formatDate =
+    (date) => {
+
+      return new Date(
+        date
+      ).toLocaleDateString(
+        "en-IN",
+        {
+          day:
+            "numeric",
+          month:
+            "long",
+          year:
+            "numeric",
+        }
+      );
+
+    };
 
   if (!friend) {
+
     return (
       <div
         className="
@@ -121,123 +379,99 @@ function ChatBox({ friend, currentUser }) {
         align-items-center
         "
       >
-        <h4 className="text-muted">Select Friend To Start Chat</h4>
+        <h4 className="text-muted">
+          Select Friend To Start Chat
+        </h4>
       </div>
     );
+
   }
 
   return (
     <div
-      className="d-flex flex-column"
+      className="
+      d-flex
+      flex-column
+      "
       style={{
         height: "100%",
-        overflow: "hidden",
+        overflow:
+          "hidden",
       }}
     >
-      {/* HEADER */}
 
-      <div
-        className="text-white p-3 shadow-sm"
-        style={{
-          background: "#075E54",
-        }}
-      >
-        <h5 className="mb-0">{friend.name}</h5>
-      </div>
+      <ChatHeader
+        friend={friend}
+        startCall={
+          startCall
+        }
+        endCall={
+          endCall
+        }
+        myVideo={
+          myVideo
+        }
+        userVideo={
+          userVideo
+        }
+      />
 
       {typing && (
         <div
           className="
-px-3
-py-1
-small
-text-success
-"
+          px-3
+          py-1
+          small
+          text-success
+          "
         >
           Typing...
         </div>
       )}
 
-      {/* MESSAGES */}
+      <MessageList
+        messages={
+          messages
+        }
+        currentUser={
+          currentUser
+        }
+        selectedMessage={
+          selectedMessage
+        }
+        setSelectedMessage={
+          setSelectedMessage
+        }
+        editMessage={
+          editMessage
+        }
+        deleteMessage={
+          deleteMessage
+        }
+        messagesEndRef={
+          messagesEndRef
+        }
+        formatDate={
+          formatDate
+        }
+      />
 
-      <div
-        className="flex-grow-1"
-        style={{
-          overflowY: "auto",
-          padding: "20px",
-          background: "#e5ddd5",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} currentUser={currentUser} />
-        ))}
+      <ChatInput
+        text={text}
+        setText={setText}
+        sendMessage={
+          sendMessage
+        }
+        currentUser={
+          currentUser
+        }
+        friend={friend}
+        socket={socket}
+        typingTimeoutRef={
+          typingTimeoutRef
+        }
+      />
 
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* INPUT BOX */}
-
-      <div
-        className="
-        p-3
-        border-top
-        bg-white
-        "
-      >
-        <div
-          className="
-          input-group
-          "
-        >
-          <input
-            type="text"
-            className="
-            form-control
-            "
-            placeholder="
-            Type a message...
-            "
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-
-              if (!friend?.id) return;
-
-              socket.emit("typing", {
-                senderId: currentUser,
-                receiverId: friend.id,
-              });
-
-              clearTimeout(typingTimeoutRef.current);
-
-              typingTimeoutRef.current = setTimeout(() => {
-                socket.emit("stopTyping", {
-                  senderId: currentUser,
-                  receiverId: friend.id,
-                });
-              }, 1000);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                sendMessage();
-              }
-            }}
-          />
-
-          <button
-            className="btn"
-            style={{
-              background: "#075E54",
-              color: "#fff",
-            }}
-            onClick={sendMessage}
-          >
-            Send
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

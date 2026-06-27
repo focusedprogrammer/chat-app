@@ -238,7 +238,7 @@ function Home() {
           style={{
             background: "#ece5dd",
             height: "calc(100vh - 60px)",
-            overflow: "hidden",
+            overflow: "scroll",
           }}
         >
           <div className="flex-grow-1">

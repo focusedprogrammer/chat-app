@@ -139,7 +139,43 @@ io.on("connection", (socket) => {
     }
   );
 
+  socket.on("call-user", (data) => {
+  io.to(`user_${data.receiverId}`).emit(
+    "incoming-call",
+    {
+      callerId: data.callerId,
+      callerName: data.callerName,
+      offer: data.offer,
+      callType: data.callType
+    }
+  );
 });
+
+socket.on("answer-call", (data) => {
+  io.to(`user_${data.callerId}`).emit(
+    "call-answered",
+    {
+      answer: data.answer
+    }
+  );
+});
+
+socket.on("ice-candidate", (data) => {
+  io.to(`user_${data.receiverId}`).emit(
+    "ice-candidate",
+    data.candidate
+  );
+});
+
+socket.on("end-call", (data) => {
+  io.to(`user_${data.receiverId}`).emit(
+    "call-ended"
+  );
+});
+
+});
+
+
 
 server.listen(
   process.env.PORT,
